@@ -1,3 +1,29 @@
+let appInsights = require("applicationinsights");
+appInsights
+  .setup(
+    "InstrumentationKey=3d5c4009-d921-4afc-972a-92e1f4ce8544;IngestionEndpoint=https://centralus-2.in.applicationinsights.azure.com/;LiveEndpoint=https://centralus.livediagnostics.monitor.azure.com/"
+  )
+  .setAutoDependencyCorrelation(true)
+  .setAutoCollectRequests(true)
+  .setAutoCollectPerformance(true, true)
+  .setAutoCollectExceptions(true)
+  .setAutoCollectDependencies(true)
+  .setAutoCollectConsole(true)
+  .setUseDiskRetryCaching(true)
+  .setSendLiveMetrics(true)
+  .start();
+
+let client = appInsights.defaultClient;
+client.trackEvent({
+  name: "my custom event",
+  properties: { customProperty: "custom property value" },
+});
+client.trackException({
+  exception: new Error("handled exceptions can be logged with this method"),
+});
+client.trackMetric({ name: "custom metric", value: 3 });
+client.trackTrace({ message: "trace message" });
+
 const express = require("express");
 const app = express();
 var jwt = require("jsonwebtoken");
@@ -21,10 +47,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.get("/", (req, res) => {
+  appInsights.defaultClient.trackNodeHttpRequest({
+    request: req,
+    response: res,
+  });
   res.render("index");
 });
 
 app.get("/login", (req, res) => {
+  appInsights.defaultClient.trackNodeHttpRequest({
+    request: req,
+    response: res,
+  });
   res.render("login");
 });
 
@@ -83,9 +117,14 @@ app.get("/register", (req, res) => {
 //     res.status(400).send(err);
 //   }
 // });
-
+let start = Date.now();
 app.listen(port, () => {
   console.log(`server is listening on ${port}`);
+  let duration = Date.now() - start;
+  appInsights.defaultClient.trackMetric({
+    name: "server startup time",
+    value: duration,
+  });
 });
 
 // const securePassword = async (pass) => {
